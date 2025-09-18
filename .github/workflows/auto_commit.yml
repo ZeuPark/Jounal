@@ -1,7 +1,9 @@
+# .github/workflows/auto_commit.yml
 name: Daily Auto Commit
+
 on:
   schedule:
-    - cron: "0 23 * * *"   # 매일 23:00 UTC (시드니 09:00 또는 서머타임에 10:00)
+    - cron: "0 23 * * *"   # 매일 23:00 UTC (시드니 09:00 또는 서머타임 10:00)
   workflow_dispatch:
 
 permissions:
@@ -11,15 +13,39 @@ jobs:
   commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Configure git
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Prepare git
         run: |
-          git config user.name "github-actions[bot]"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Update heartbeat
+
+      - name: Detect default branch
+        id: branch
+        run: |
+          # 기본 브랜치 감지 (main/master 등)
+          DEF_BRANCH="${{ github.event.repository.default_branch }}"
+          if [ -z "$DEF_BRANCH" ]; then
+            DEF_BRANCH="$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')"
+          fi
+          echo "branch=$DEF_BRANCH" >> $GITHUB_OUTPUT
+          git switch "$DEF_BRANCH"
+
+      - name: Update heartbeat file
         run: |
           mkdir -p .heartbeat
           echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> .heartbeat/commits.txt
           git add .heartbeat/commits.txt
+          # 변경 없으면 실패하지 않도록 처리
           git commit -m "update log" || echo "nothing to commit"
-          git push
+
+      - name: Rebase & Push
+        run: |
+          # 동시 실행/외부 변경에 대비한 리베이스
+          git pull --rebase origin "${{ steps.branch.outputs.branch }}" || true
+          git push origin "HEAD:${{ steps.branch.outputs.branch }}" || true
