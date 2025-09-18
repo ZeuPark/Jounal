@@ -3,7 +3,7 @@ name: Daily Auto Commit
 
 on:
   schedule:
-    - cron: "0 23 * * *"   # 매일 23:00 UTC (시드니 09:00 또는 서머타임 10:00)
+    - cron: "0 23 * * *"   # 매일 23:00 UTC (시드니 09:00/서머타임 10:00)
   workflow_dispatch:
 
 permissions:
@@ -28,7 +28,6 @@ jobs:
       - name: Detect default branch
         id: branch
         run: |
-          # 기본 브랜치 감지 (main/master 등)
           DEF_BRANCH="${{ github.event.repository.default_branch }}"
           if [ -z "$DEF_BRANCH" ]; then
             DEF_BRANCH="$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')"
@@ -36,16 +35,19 @@ jobs:
           echo "branch=$DEF_BRANCH" >> $GITHUB_OUTPUT
           git switch "$DEF_BRANCH"
 
-      - name: Update heartbeat file
+      - name: Commit (idempotent)
         run: |
           mkdir -p .heartbeat
-          echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> .heartbeat/commits.txt
+          # 항상 변경 만들기
+          printf "%s\n" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> .heartbeat/commits.txt
           git add .heartbeat/commits.txt
-          # 변경 없으면 실패하지 않도록 처리
-          git commit -m "update log" || echo "nothing to commit"
+
+          # 스테이징에 변화 없으면 정상 종료(0)
+          git diff --cached --quiet && { echo "no changes"; exit 0; }
+
+          git commit -m "update log"
 
       - name: Rebase & Push
         run: |
-          # 동시 실행/외부 변경에 대비한 리베이스
           git pull --rebase origin "${{ steps.branch.outputs.branch }}" || true
-          git push origin "HEAD:${{ steps.branch.outputs.branch }}" || true
+          git push origin "HEAD:${{ steps.branch.outputs.branch }}"
