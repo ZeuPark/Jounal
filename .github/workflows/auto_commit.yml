@@ -1,0 +1,25 @@
+name: Daily Auto Commit
+on:
+  schedule:
+    - cron: "0 23 * * *"   # 매일 23:00 UTC (시드니 09:00 또는 서머타임에 10:00)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Update heartbeat
+        run: |
+          mkdir -p .heartbeat
+          echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> .heartbeat/commits.txt
+          git add .heartbeat/commits.txt
+          git commit -m "update log" || echo "nothing to commit"
+          git push
