@@ -12,6 +12,12 @@ permissions:
 jobs:
   commit:
     runs-on: ubuntu-latest
+    env:
+      # 잔디 집계를 위해 '작성자/커미터'를 내 계정으로 지정
+      GIT_AUTHOR_NAME:  ${{ github.actor }}
+      GIT_COMMITTER_NAME: ${{ github.actor }}
+      GIT_AUTHOR_EMAIL:  ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+      GIT_COMMITTER_EMAIL: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,8 +28,9 @@ jobs:
       - name: Prepare git
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # ↓ 로컬 git 설정은 env로 이미 커버되지만, 안전하게 한 번 더 지정
+          git config user.name  "${GIT_AUTHOR_NAME}"
+          git config user.email "${GIT_AUTHOR_EMAIL}"
 
       - name: Detect default branch
         id: branch
@@ -39,14 +46,11 @@ jobs:
         run: |
           mkdir -p .heartbeat
           printf "%s\n" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> .heartbeat/commits.txt
-          git add -f .heartbeat/commits.txt   # <- 강제 추가
+          git add -f .heartbeat/commits.txt
           git diff --cached --quiet && { echo "no changes"; exit 0; }
-          git commit -m "update log"
-
+          git commit -m "chore: daily heartbeat"
 
       - name: Rebase & Push
         run: |
           git pull --rebase origin "${{ steps.branch.outputs.branch }}" || true
           git push origin "HEAD:${{ steps.branch.outputs.branch }}"
-
-
