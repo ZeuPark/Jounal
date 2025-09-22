@@ -3,7 +3,8 @@ name: Daily Auto Commit
 
 on:
   schedule:
-    - cron: "0 23 * * 1-5"   # 평일 23:00 UTC (시드니 09:00/서머타임 10:00)
+    # UTC 일–목 23:00 → 시드니 월–금 오전 09:00(AEST) / 10:00(AEDT)
+    - cron: "0 23 * * 0-4"
   workflow_dispatch:
 
 permissions:
@@ -13,11 +14,11 @@ jobs:
   commit:
     runs-on: ubuntu-latest
     env:
-      # 잔디 집계를 위해 '작성자/커미터'를 내 계정으로 지정
-      GIT_AUTHOR_NAME:  ${{ github.actor }}
-      GIT_COMMITTER_NAME: ${{ github.actor }}
-      GIT_AUTHOR_EMAIL:  ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
-      GIT_COMMITTER_EMAIL: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+      GIT_AUTHOR_NAME: "ZeuPark"
+      GIT_COMMITTER_NAME: "ZeuPark"
+      GIT_AUTHOR_EMAIL: "197379177+ZeuPark@users.noreply.github.com"
+      GIT_COMMITTER_EMAIL: "197379177+ZeuPark@users.noreply.github.com"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,7 +29,6 @@ jobs:
       - name: Prepare git
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          # ↓ 로컬 git 설정은 env로 이미 커버되지만, 안전하게 한 번 더 지정
           git config user.name  "${GIT_AUTHOR_NAME}"
           git config user.email "${GIT_AUTHOR_EMAIL}"
 
