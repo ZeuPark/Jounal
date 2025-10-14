@@ -4,7 +4,7 @@ name: Daily Auto Commit
 on:
   schedule:
     # UTC 일–목 23:00 → 시드니 월–금 오전 09:00(AEST) / 10:00(AEDT)
-    - cron: "0 23 * * 0-4"
+    - cron: "0 23 * * 1-5"
   workflow_dispatch:
 
 permissions:
